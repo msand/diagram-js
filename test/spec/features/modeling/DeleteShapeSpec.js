@@ -162,9 +162,17 @@ describe('features/modeling - #removeShape', function() {
 
   describe('attachment', function () {
 
-    var attachedShape, attachedShape2, attachedShape3, attachedShape4;
+    var child, connection, attachedShape, attachedShape2, attachedShape3, attachedShape4;
 
-    beforeEach(inject(function(modeling, elementFactory) {
+    beforeEach(inject(function(modeling, elementFactory, canvas) {
+
+      child = elementFactory.createShape({
+        id: 'child',
+        x: 600, y: 75,
+        width: 50, height: 50
+      });
+
+      canvas.addShape(child, rootShape);
 
       attachedShape = elementFactory.createShape({
         id: 'attachedShape',
@@ -194,6 +202,17 @@ describe('features/modeling - #removeShape', function() {
 
       modeling.createShape(attachedShape4, { x: 400, y: 400 }, parentShape, true);
 
+      connection = elementFactory.createConnection({
+        id: 'connection',
+        source: attachedShape2,
+        target: child,
+        waypoints: [
+          { x: 400, y: 100 },
+          { x: 625, y: 100 }
+        ]
+      });
+
+      canvas.addConnection(connection, rootShape);
     }));
 
     it('should remove attacher from host', inject(function(modeling) {
@@ -245,6 +264,48 @@ describe('features/modeling - #removeShape', function() {
       // then
       expect(parentShape.attachers).to.have.length(4);
       expect(parentShape.attachers).to.eql([ attachedShape, attachedShape2, attachedShape3, attachedShape4 ]);
+    }));
+
+
+    it('should remove connection when deleting shape', inject(function(modeling) {
+      // when
+      modeling.removeShape(attachedShape2);
+
+      // then
+      expect(child.incoming).to.have.length(0);
+    }));
+
+
+    it('should add connection when deleting shape -> undo', inject(function(commandStack, modeling) {
+      // given
+      modeling.removeShape(attachedShape2);
+
+      // when
+      commandStack.undo();
+
+      // then
+      expect(child.incoming).to.have.length(1);
+    }));
+
+
+    it('should remove connection when deleting host of connected shape', inject(function(modeling) {
+      // when
+      modeling.removeShape(parentShape);
+
+      // then
+      expect(child.incoming).to.have.length(0);
+    }));
+
+
+    it('should add connection when deleting host of connected shape -> undo', inject(function(commandStack, modeling) {
+      // given
+      modeling.removeShape(parentShape);
+
+      // when
+      commandStack.undo();
+
+      // then
+      expect(child.incoming).to.have.length(1);
     }));
 
 
